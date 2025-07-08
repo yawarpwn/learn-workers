@@ -56,7 +56,12 @@ export default {
 	},
 
 	// This scheduled function will be triggered every 5 minutes
-	async scheduled(event, env, ctx) {
-		console.log('Triggered by cron:', event.cron);
+	async scheduled(controller, env, ctx) {
+		const params = {
+			accountId: '5v_7x2b64v8Oq-P2-bsfuf2xlV5kOB6BBZS2v-Hd',
+			databaseId: '5106c371-333c-4545-ac8f-a1b7827fdb31',
+		};
+		const instance = await env.BACKUP_WORKFLOW.create({ params });
+		console.log(`Started workflow: ${instance.id}`);
 	},
 };
