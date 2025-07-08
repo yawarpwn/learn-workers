@@ -1,43 +1,65 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { WorkflowEntrypoint } from 'cloudflare:workers';
+
+// Workflow logic
+export class backupWorkflow extends WorkflowEntrypoint {
+	async run(event, step) {
+		const { accountId, databaseId } = event.payload;
+
+		const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/export`;
+		const method = 'POST';
+		const headers = new Headers();
+		headers.append('Content-Type', 'application/json');
+		headers.append('Authorization', `Bearer ${this.env.D1_REST_API_TOKEN}`);
+
+		const bookmark = await step.do(`Starting backup for ${databaseId}`, async () => {
+			const payload = { output_format: 'polling' };
+
+			const res = await fetch(url, {
+				method,
+				headers,
+				body: JSON.stringify(payload),
+			});
+			const { result } = await res.json();
+
+			// If we don't get `at_bookmark` we throw to retry the step
+			if (!result?.at_bookmark) throw new Error('Missing `at_bookmark`');
+
+			return result.at_bookmark;
+		});
+
+		await step.do('Check backup status and store it on R2', async () => {
+			const payload = { current_bookmark: bookmark };
+
+			const res = await fetch(url, {
+				method,
+				headers,
+				body: JSON.stringify(payload),
+			});
+			const { result } = await res.json();
+
+			// The endpoint sends `signed_url` when the backup is ready to download.
+			// If we don't get `signed_url` we throw to retry the step.
+			if (!result?.signed_url) throw new Error('Missing `signed_url`');
+
+			const dumpResponse = await fetch(result.signed_url);
+			if (!dumpResponse.ok) throw new Error('Failed to fetch dump file');
+
+			// Finally, stream the file directly to R2
+			await this.env.BACKUP_BUCKET.put(result.filename, dumpResponse.body);
+		});
+	}
+}
 
 export default {
-	async fetch(request, env, ctx) {
-		// console.log('request:', request);
-		// console.log('db:', env);
-
-		try {
-			// 1. Usamos la API de D1 para crear un volcado completo de la base de datos.
-			// Esto nos devuelve un stream de datos en formato SQL.
-			console.log('------db', await env.DB.dump());
-
-			// 2. Creamos un nombre de archivo único usando la fecha y hora actual.
-			// Formato: backup-2025-07-06T03-15-00-000Z.sql
-			// const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-			// const filename = `backup-${timestamp}.sql`;
-
-			// 3. Subimos el archivo de respaldo a nuestro bucket de R2.
-			// await env.BACKUP_BUCKET.put(filename, dump);
-
-			// console.log(`✅ Respaldo completado exitosamente. Archivo: ${filename}`);
-		} catch (e) {
-			// Si algo sale mal, lo mostramos en la consola del Worker.
-			console.error('❌ Error durante el proceso de respaldo:', e);
-		}
-
-		return new Response('prueba okay');
-
-		// const { results } = await env.DB.prepare('select * from productos where id = ?').bind(1).all();
-
-		return new Response(JSON.stringify({ results }), {
-			headers: { 'Content-Type': 'application/json' },
-		});
+	async fetch(req, env) {
+		return new Response('Not found', { status: 404 });
+	},
+	async scheduled(controller, env, ctx) {
+		const params = {
+			accountId: '{accountId}',
+			databaseId: '{databaseId}',
+		};
+		const instance = await env.BACKUP_WORKFLOW.create({ params });
+		console.log(`Started workflow: ${instance.id}`);
 	},
 };

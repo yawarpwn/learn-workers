@@ -7,9 +7,17 @@
 	"compatibility_date": "2025-07-05",
 	"name": "tellapp-backup",
 	"main": "src/index.js",
+	"compatibility_flags": ["nodejs_compat"],
 	"observability": {
 		"enabled": true,
 	},
+	"workflows": [
+		{
+			"name": "backup-workflow",
+			"binding": "BACKUP_WORKFLOW",
+			"class_name": "backupWorkflow",
+		},
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -24,4 +32,7 @@
 			"binding": "BACKUP_BUCKET",
 		},
 	],
+	"triggers": {
+		"crons": ["0 0 * * *"],
+	},
 }
