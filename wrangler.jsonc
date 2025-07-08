@@ -33,6 +33,7 @@
 		},
 	],
 	"triggers": {
-		"crons": ["0 0 * * *"],
+		// "crons": ["0 0 * * *"],
+		"crons": ["*/5 * * * *"], // ← Cada 5 minutos
 	},
 }
