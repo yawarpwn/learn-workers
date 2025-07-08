@@ -52,15 +52,55 @@ export class backupWorkflow extends WorkflowEntrypoint {
 
 export default {
 	async fetch(req, env) {
+		const accountId = '8822126d2aafa667c35b5849162bbb3b'; // Reemplaza con tu Account ID de Cloudflare
+		const databaseId = '5106c371-333c-4545-ac8f-a1b7827fdb31';
+		const D1_REST_API_TOKEN = '';
+		const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/export`;
+		const method = 'POST';
+		const headers = new Headers();
+		headers.append('Content-Type', 'application/json');
+		headers.append('Authorization', `Bearer 5v_7x2b64v8Oq-P2-bsfuf2xlV5kOB6BBZS2v-Hd`);
+
+		const payload = { output_format: 'polling' };
+		const res = await fetch(url, {
+			method,
+			headers,
+			body: JSON.stringify(payload),
+		});
+		const { result } = await res.json();
+
+		if (!result.at_bookmark) throw new Error('missing `at_bookmark`');
+
+		const bookmark = result.at_bookmark;
+
+		const payl = { current_bookmark: bookmark };
+
+		const response = await fetch(url, {
+			method,
+			headers,
+			body: JSON.stringify(payl),
+		});
+
+		const { result: result_all } = await response.json();
+
+		// The endpoint sends `signed_url` when the backup is ready to download.
+		// If we don't get `signed_url` we throw to retry the step.
+		if (!result_all?.signed_url) throw new Error('Missing `signed_url`');
+
+		const dumpResponse = await fetch(result_all.signed_url);
+		if (!dumpResponse.ok) throw new Error('Failed to fetch dump file');
+
+		await env.BACKUP_BUCKET.put(result_all.filename, dumpResponse.body);
+
 		return new Response('Not found', { status: 404 });
 	},
-	async scheduled(controller, env, ctx) {
-		const params = {
-			accountId: '8822126d2aafa667c35b5849162bbb3b', // Reemplaza con tu Account ID de Cloudflare
-			databaseId: '5106c371-333c-4545-ac8f-a1b7827fdb31',
-		};
-
-		const instance = await env.BACKUP_WORKFLOW.create({ params });
-		console.log(`Started workflow: ${instance.id}`);
-	},
+	// async scheduled(controller, env, ctx) {
+	// 	const params = {
+	// 		accountId: '8822126d2aafa667c35b5849162bbb3b', // Reemplaza con tu Account ID de Cloudflare
+	// 		databaseId: '5106c371-333c-4545-ac8f-a1b7827fdb31',
+	// 	};
+	//
+	// 	const instance = await env.BACKUP_WORKFLOW.create({ params });
+	// 	console.log(`Started workflow: ${instance.id}`);
+	// },
 };
