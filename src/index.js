@@ -1,65 +1,68 @@
-import { WorkflowEntrypoint } from 'cloudflare:workers';
+import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from 'cloudflare:workers';
 
-// Workflow logic
-export class backupWorkflow extends WorkflowEntrypoint {
+// type Env = {
+//   BACKUP_WORKFLOW: Workflow;
+//   DB: D1Database;
+//   BACKUP_BUCKET: R2Bucket;
+//   D1_REST_API_TOKEN: string;
+// };
+//
+// type Params = {
+//   accountId: string;
+//   databaseId: string;
+// };
+
+export class BackupWorkflow extends WorkflowEntrypoint {
 	async run(event, step) {
 		const { accountId, databaseId } = event.payload;
 
-		const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/export`;
-		const method = 'POST';
-		const headers = new Headers();
-		headers.append('Content-Type', 'application/json');
-		headers.append('Authorization', `Bearer ${this.env.D1_REST_API_TOKEN}`);
-
-		const bookmark = await step.do(`Starting backup for ${databaseId}`, async () => {
-			const payload = { output_format: 'polling' };
-
+		// 1. Iniciar exportación
+		const bookmark = await step.do('Start D1 export', async () => {
+			const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/export`;
 			const res = await fetch(url, {
-				method,
-				headers,
-				body: JSON.stringify(payload),
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${this.env.D1_REST_API_TOKEN}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ output_format: 'polling' }),
 			});
 			const { result } = await res.json();
-
-			// If we don't get `at_bookmark` we throw to retry the step
-			if (!result?.at_bookmark) throw new Error('Missing `at_bookmark`');
-
+			if (!result?.at_bookmark) throw new Error('Export failed');
 			return result.at_bookmark;
 		});
 
-		await step.do('Check backup status and store it on R2', async () => {
-			const payload = { current_bookmark: bookmark };
-
+		// 2. Verificar y subir a R2
+		await step.do('Upload to R2', async () => {
+			const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/export`;
 			const res = await fetch(url, {
-				method,
-				headers,
-				body: JSON.stringify(payload),
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${this.env.D1_REST_API_TOKEN}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ current_bookmark: bookmark }),
 			});
 			const { result } = await res.json();
+			if (!result?.signed_url) throw new Error('Backup not ready');
 
-			// The endpoint sends `signed_url` when the backup is ready to download.
-			// If we don't get `signed_url` we throw to retry the step.
-			if (!result?.signed_url) throw new Error('Missing `signed_url`');
-
-			const dumpResponse = await fetch(result.signed_url);
-			if (!dumpResponse.ok) throw new Error('Failed to fetch dump file');
-
-			// Finally, stream the file directly to R2
-			await this.env.BACKUP_BUCKET.put(result.filename, dumpResponse.body);
+			// Descargar y subir a R2
+			const dumpRes = await fetch(result.signed_url);
+			await this.env.BACKUP_BUCKET.put(`backup-${new Date().toISOString()}.sql`, dumpRes.body);
 		});
 	}
 }
 
+// Handler para el Worker (opcional)
 export default {
-	async fetch(req, env) {
-		return new Response('Not found', { status: 404 });
+	async fetch(request, env) {
+		return new Response('Use /backup to trigger manually');
 	},
-	async scheduled(controller, env, ctx) {
+	async scheduled(controller, env) {
 		const params = {
-			accountId: '{accountId}',
-			databaseId: '{databaseId}',
+			accountId: '8822126d2aafa667c35b5849162bbb3b', // Reemplaza con tu Account ID de Cloudflare
+			databaseId: '5106c371-333c-4545-ac8f-a1b7827fdb31',
 		};
-		const instance = await env.BACKUP_WORKFLOW.create({ params });
-		console.log(`Started workflow: ${instance.id}`);
+		await env.BACKUP_WORKFLOW.create({ params });
 	},
 };
