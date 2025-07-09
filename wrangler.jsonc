@@ -26,7 +26,8 @@
 		},
 	],
 	"triggers": {
-		// "crons": ["0 0 * * *"],
-		"crons": ["* * * * *"], // ← Cada 5 minutos
+		// "crons": ["*/5 * * *"], // <- Cada 5 minutos
+		// "crons": ["* * * * *"], // ← Cada 1 minutos
+		"crons": ["0 0 * * *"], // Se ejecuta a medianoche (00:00 UTC) todos los días
 	},
 }
