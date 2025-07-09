@@ -17,18 +17,6 @@
 			"binding": "BACKUP_WORKFLOW",
 			"class_name": "backupWorkflow",
 		},
-		{
-			"name": "my-workflow",
-			"binding": "MY_WORKFLOW",
-			"class_name": "MyWorkflow",
-		},
-	],
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "DUMP_DB",
-			"database_id": "5106c371-333c-4545-ac8f-a1b7827fdb31",
-		},
 	],
 
 	"r2_buckets": [

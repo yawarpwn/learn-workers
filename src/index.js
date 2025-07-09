@@ -68,23 +68,6 @@ export class backupWorkflow extends WorkflowEntrypoint {
 	}
 }
 
-export class MyWorkflow extends WorkflowEntrypoint {
-	async run(event, step) {
-		// Your workflow logic goes here
-		await step.do('first step', async () => {
-			console.log('meee');
-			console.log('payload', event.payload);
-		});
-
-		await step.sleep('dormiendo', '1m');
-
-		await step.do('second step', async () => {
-			console.log('muuu');
-			console.log(this.env.D1_REST_API_TOKEN);
-		});
-	}
-}
-
 export default {
 	async fetch(req, env) {
 		return new Response('backup d1 database');
@@ -94,7 +77,7 @@ export default {
 	async scheduled(controller, env, ctx) {
 		const params = {
 			accountId: '8822126d2aafa667c35b5849162bbb3b',
-			databaseId: '5106c371-333c-4545-ac8f-a1b7827fdb31',
+			databaseId: 'd0b07f27-00ed-426d-8ae4-692e970da855',
 		};
 		//
 		// console.log('muuu');
