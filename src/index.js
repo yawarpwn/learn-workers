@@ -50,19 +50,22 @@ import { WorkflowEntrypoint } from 'cloudflare:workers';
 // 	}
 // }
 
-// export class MyWorkflow extends WorkflowEntrypoint {
-// 	async run(event, step) {
-// 		// Your workflow logic goes here
-// 		step.do('first step', async () => {
-// 			console.log('meee');
-// 			console.log('payload', event.payload);
-// 		});
-//
-// 		step.do('second step', async () => {
-// 			console.log('muuu');
-// 		});
-// 	}
-// }
+export class MyWorkflow extends WorkflowEntrypoint {
+	async run(event, step) {
+		// Your workflow logic goes here
+		await step.do('first step', async () => {
+			console.log('meee');
+			console.log('payload', event.payload);
+		});
+
+		await step.sleep('dormiendo', '1m');
+
+		await step.do('second step', async () => {
+			console.log('muuu');
+			console.log(this.env.D1_REST_API_TOKEN);
+		});
+	}
+}
 
 export default {
 	async fetch(req, env) {
@@ -71,14 +74,13 @@ export default {
 
 	// This scheduled function will be triggered every 5 minutes
 	async scheduled(controller, env, ctx) {
-		console.log(Math.random());
-		// const params = {
-		// 	accountId: '5v_7x2b64v8Oq-P2-bsfuf2xlV5kOB6BBZS2v-Hd',
-		// 	databaseId: '5106c371-333c-4545-ac8f-a1b7827fdb31',
-		// };
+		const params = {
+			accountId: '5v_7x2b64v8Oq-P2-bsfuf2xlV5kOB6BBZS2v-Hd',
+			databaseId: '5106c371-333c-4545-ac8f-a1b7827fdb31',
+		};
 		//
 		// console.log('muuu');
-		// const instance = await env.MY_WORKFLOW.create({ params });
-		// console.log(`Started workflow: ${instance.id}  `);
+		const instance = await env.MY_WORKFLOW.create({ params });
+		console.log(`Started workflow: ${instance.id}  `);
 	},
 };

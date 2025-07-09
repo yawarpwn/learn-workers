@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"compatibility_date": "2025-07-05",
+	"compatibility_date": "2025-06-17",
 	"name": "tellapp-backup",
 	"main": "src/index.js",
 	"compatibility_flags": ["nodejs_compat"],
@@ -17,11 +17,11 @@
 		// 	"binding": "BACKUP_WORKFLOW",
 		// 	"class_name": "backupWorkflow",
 		// },
-		// {
-		// 	"name": "my-workflow",
-		// 	"binding": "MY_WORKFLOW",
-		// 	"class_name": "MyWorkflow",
-		// },
+		{
+			"name": "my-workflow",
+			"binding": "MY_WORKFLOW",
+			"class_name": "MyWorkflow",
+		},
 	],
 	"d1_databases": [
 		{
