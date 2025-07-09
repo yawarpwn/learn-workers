@@ -27,9 +27,7 @@ export class backupWorkflow extends WorkflowEntrypoint {
 		const method = 'POST';
 		const headers = new Headers();
 		headers.append('Content-Type', 'application/json');
-		headers.append('Authorization', `Bearer 5v_7x2b64v8Oq-P2-bsfuf2xlV5kOB6BBZS2v-Hd`);
-
-		console.log({ accountId, databaseId, env: this.env });
+		headers.append('Authorization', `Bearer ${this.env.D1_REST_API_TOKEN}`);
 
 		const bookmark = await step.do(`Starting backup for ${databaseId}`, async () => {
 			const payload = { output_format: 'polling' };
