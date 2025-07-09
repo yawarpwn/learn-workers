@@ -12,11 +12,16 @@
 		"enabled": true,
 	},
 	"workflows": [
-		{
-			"name": "backup-workflow",
-			"binding": "BACKUP_WORKFLOW",
-			"class_name": "backupWorkflow",
-		},
+		// {
+		// 	"name": "backup-workflow",
+		// 	"binding": "BACKUP_WORKFLOW",
+		// 	"class_name": "backupWorkflow",
+		// },
+		// {
+		// 	"name": "my-workflow",
+		// 	"binding": "MY_WORKFLOW",
+		// 	"class_name": "MyWorkflow",
+		// },
 	],
 	"d1_databases": [
 		{
@@ -34,6 +39,6 @@
 	],
 	"triggers": {
 		// "crons": ["0 0 * * *"],
-		"crons": ["*/5 * * * *"], // ← Cada 5 minutos
+		"crons": ["* * * * *"], // ← Cada 5 minutos
 	},
 }
